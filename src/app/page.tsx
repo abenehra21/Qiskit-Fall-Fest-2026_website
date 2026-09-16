@@ -18,9 +18,12 @@ export default function Home() {
   return (
     <>
       <Navbar />
+      {/* Outside <main> on purpose: ScrollBirds anchors each bird to a
+          percentage of main's height, so letting the intro add ~140vh to it
+          would drag the whole flock down the page. */}
+      <ScrollVideo />
       {/* relative so the bird layer can size itself to the whole page */}
       <main className="relative">
-        <ScrollVideo />
         <ScrollBirds />
         <Hero />
         <DetailsSection />

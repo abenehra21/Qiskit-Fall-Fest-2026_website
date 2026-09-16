@@ -1,162 +1,127 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { ArrowRight } from "lucide-react";
 
+/**
+ * The intro: a video scrubbed by the page's own scroll position.
+ *
+ * The section is `INTRO_VH` tall and the video sticks to the top of it, so
+ * scrubbing is just a function of how far through that section you are. This
+ * is deliberately *not* scroll hijacking. The previous version swallowed
+ * `wheel` and `touchmove` with preventDefault, synthesised its own motion, and
+ * then froze the body for 2.5s when the video ended — which is why the page
+ * ignored you at the handoff until you lifted off the trackpad and swiped
+ * again: the browser had already consumed that gesture and will not resume one
+ * mid-flight after `overflow` is toggled. Riding real scroll means there is no
+ * handoff to get wrong, and momentum carries straight through into the hero.
+ *
+ * SCRUB_VH is the one knob for pacing: how much *scrolling* the 10s video is
+ * mapped onto. The section is a viewport taller than that, because the sticky
+ * child occupies the first 100vh and only the remainder is travel — get this
+ * wrong and a 140vh section gives just 40vh of scrubbing. The old wheel maths
+ * needed ~3,300px of accumulated delta, roughly 15-30 trackpad swipes; 120vh
+ * is about a third of that.
+ */
+const SCRUB_VH = 120;
+
 export function ScrollVideo() {
+  const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [hasScrolled, setHasScrolled] = useState(false);
-  const [isFinished, setIsFinished] = useState(false);
-  const [shouldLockHero, setShouldLockHero] = useState(false);
+  const hintRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
-    if (isFinished && shouldLockHero) {
-      document.body.style.overflow = 'hidden';
-      const timer = setTimeout(() => {
-        document.body.style.overflow = '';
-      }, 2500); // Lock for 2.5 seconds
-      return () => {
-        clearTimeout(timer);
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isFinished, shouldLockHero]);
+    const section = sectionRef.current;
+    const video = videoRef.current;
+    if (!section || !video) return;
+    // The section is display:none under reduced motion; don't drive it either.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-  useEffect(() => {
-    if (window.scrollY > 100) {
-      setIsFinished(true);
-      return;
-    }
+    let frame: number | undefined;
 
-    if (isFinished) return; // Don't attach scrubbing listeners if finished!
+    const update = () => {
+      frame = undefined;
+      const scrollable = section.offsetHeight - window.innerHeight;
+      if (scrollable <= 0 || !Number.isFinite(video.duration)) return;
 
-    let targetTime = 0;
-    let currentTime = 0;
-    let animationFrameId: number;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault(); // Lock native scrolling
-      setHasScrolled(true);
-
-      if (!videoRef.current || !videoRef.current.duration) return;
-      
-      // We translate the scroll distance into a strict video time delta
-      // with a hard cap to ensure it can never scrub too fast.
-      const scrubSpeed = 0.003; 
-      let timeDelta = e.deltaY * scrubSpeed;
-      
-      // Hard speed limit per wheel event
-      const maxDelta = 0.15;
-      if (timeDelta > maxDelta) timeDelta = maxDelta;
-      if (timeDelta < -maxDelta) timeDelta = -maxDelta;
-
-      targetTime += timeDelta;
-      
-      if (targetTime < 0) targetTime = 0;
-      if (targetTime > videoRef.current.duration) {
-        targetTime = videoRef.current.duration;
+      const progress = Math.min(
+        Math.max(-section.getBoundingClientRect().top / scrollable, 0),
+        1,
+      );
+      // Mapped straight across, no easing: the scroll itself is already
+      // smoothed by the platform, and easing on top only adds lag.
+      video.currentTime = progress * video.duration;
+      if (hintRef.current) {
+        hintRef.current.style.opacity = progress > 0.02 ? "0" : "1";
       }
     };
 
-    let lastTouchY = 0;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      lastTouchY = e.touches[0].clientY;
+    const schedule = () => {
+      frame ??= window.requestAnimationFrame(update);
     };
 
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault(); // Lock native scrolling on mobile
-      setHasScrolled(true);
-      if (!videoRef.current || !videoRef.current.duration) return;
-
-      const touchY = e.touches[0].clientY;
-      const deltaY = lastTouchY - touchY;
-      lastTouchY = touchY;
-
-      // Mobile scrub speed
-      const scrubSpeed = 0.006; 
-      let timeDelta = deltaY * scrubSpeed;
-      
-      const maxDelta = 0.15;
-      if (timeDelta > maxDelta) timeDelta = maxDelta;
-      if (timeDelta < -maxDelta) timeDelta = -maxDelta;
-
-      targetTime += timeDelta;
-      if (targetTime < 0) targetTime = 0;
-      if (targetTime > videoRef.current.duration) {
-        targetTime = videoRef.current.duration;
-      }
-    };
-
-    const renderLoop = () => {
-      if (videoRef.current) {
-        // Smoothly glide towards the target time
-        currentTime += (targetTime - currentTime) * 0.08;
-        videoRef.current.currentTime = currentTime;
-
-        // If we reach the very end of the video, we unlock the page!
-        if (currentTime >= videoRef.current.duration - 0.05) {
-           setShouldLockHero(true);
-           setIsFinished(true);
-           return;
-        }
-      }
-      animationFrameId = requestAnimationFrame(renderLoop);
-    };
-
-    // We must use passive: false to allow e.preventDefault()
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("touchstart", handleTouchStart, { passive: false });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    
-    renderLoop();
-    
+    update();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule, { passive: true });
+    video.addEventListener("loadedmetadata", update);
     return () => {
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      cancelAnimationFrame(animationFrameId);
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      video.removeEventListener("loadedmetadata", update);
     };
-  }, [isFinished]);
+  }, []);
 
-  if (isFinished) return null;
+  /** Jump to the far end of the intro — i.e. the top of the hero. */
+  const skip = () => {
+    const section = sectionRef.current;
+    if (!section) return;
+    window.scrollTo({
+      top: section.offsetTop + section.offsetHeight - window.innerHeight,
+      behavior: "instant" as ScrollBehavior,
+    });
+  };
 
   return (
-    <div className="fixed inset-0 z-[100] h-screen w-full overflow-hidden bg-black">
-      <video
-        ref={videoRef}
-        src="/optimized_video.mp4"
-        className="h-full w-full object-cover"
-        muted
-        playsInline
-        preload="auto"
-        onLoadedMetadata={() => {
-          if (videoRef.current) {
-            videoRef.current.currentTime = 0.01;
-          }
-        }}
-      />
-      
-      {/* 'Scroll down' tiny text overlay that disappears when scrolling starts */}
-      <div 
-        className={`absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none transition-opacity duration-700 ${hasScrolled ? 'opacity-0' : 'opacity-100'}`}
-      >
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/70">
+    <section
+      ref={sectionRef}
+      aria-label="Intro"
+      className="relative motion-reduce:hidden"
+      style={{ height: `${SCRUB_VH + 100}vh` }}
+    >
+      {/* z above the nav so the island does not sit over the video; it scrolls
+          away with the section, and the nav comes back on its own. */}
+      <div className="sticky top-0 z-[100] h-screen w-full overflow-hidden bg-black">
+        <video
+          ref={videoRef}
+          src="/optimized_video.mp4"
+          className="h-full w-full object-cover"
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden
+          onLoadedMetadata={() => {
+            // Nudge off zero so the first frame actually paints.
+            if (videoRef.current) videoRef.current.currentTime = 0.01;
+          }}
+        />
+
+        <p
+          ref={hintRef}
+          className="pointer-events-none absolute inset-x-0 bottom-8 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-white/70 transition-opacity duration-700"
+        >
           Scroll down
         </p>
-      </div>
 
-      {/* Skip Intro Button */}
-      <button
-        onClick={() => {
-          setShouldLockHero(true);
-          setIsFinished(true);
-        }}
-        className="absolute bottom-8 right-8 z-50 group flex items-center gap-2 rounded-full border border-white/20 bg-black/50 backdrop-blur-md px-5 py-2.5 font-mono text-[11px] uppercase tracking-widest text-white transition-all duration-300 hover:bg-white/10 hover:border-white/40"
-      >
-        Skip Intro
-        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-      </button>
-    </div>
+        <button
+          type="button"
+          onClick={skip}
+          className="group absolute bottom-8 right-8 z-50 flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-5 py-2.5 font-mono text-[11px] uppercase tracking-widest text-white backdrop-blur-md transition-all duration-300 hover:border-white/40 hover:bg-white/10"
+        >
+          Skip Intro
+          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+        </button>
+      </div>
+    </section>
   );
 }

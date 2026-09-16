@@ -10,9 +10,11 @@ export const event = {
   organizer: "BITS GOA",
   tagline:
     "A campus-wide gathering for quantum computing, in circuits and in community.",
-  description: `Dive into the exciting world of quantum computing at the PLUS Qiskit Fall Fest, where curiosity meets cutting-edge technology.
-Collaborate on hands-on challenges, learn from experts, and level up your skills alongside a passionate, welcoming community.
-Whether you are a complete beginner or a coding veteran, join us to build tomorrow's solutions and shape the future of tech today!`,
+  /* Rendered as a single paragraph by SectionHeading, so it is written as one.
+     Its job is to say what Qiskit Fall Fest actually is — most visitors will
+     not know — without restating the facts grid directly beneath it. */
+  description:
+    "Qiskit Fall Fest is IBM's program of student-run quantum computing events, hosted each year by universities around the world. This is BITS Goa's: five days of workshops that build circuits up from the linear algebra, talks from people working in the field, and a 24-hour hackathon on IBM's quantum hardware. No prior quantum experience assumed. Python and first-year linear algebra are enough.",
   registerHref: "/registration",
   exploreHref: "#hackathon",
 

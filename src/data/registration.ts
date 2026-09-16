@@ -8,9 +8,7 @@ export const registrationHeader = {
   title: "Reserve Your Spot at QFF 2026",
   tagline: "BITS Qiskit Fall Fest 2026 — BITS Pilani",
   description:
-    "Join hundreds of students, researchers, and quantum enthusiasts for three days of keynotes, guided lab sessions, and a 24-hour hackathon on real quantum hardware. Registration is completely free.",
-  notice:
-    "Early applications are prioritized for hands-on hardware compute credits and swag kits. Acceptance confirmations will be emailed in batches.",
+    "Five days at BITS Goa — workshops, talks, and a 24-hour hackathon on IBM Quantum hardware. Free for students, in person or online. Registration is required to attend.",
 };
 
 export const attendanceOptions = [
@@ -37,21 +35,21 @@ export const registrationPerks: RegistrationPerk[] = [
     id: "certificates",
     title: "Official IBM & BITS Certificate",
     description:
-      "Receive verified digital credentials validating your attendance, lab completions, and hackathon participation.",
+      "Issued jointly by IBM and BITS Pilani after the fest, covering attendance, workshop completion and hackathon participation.",
     icon: "award",
   },
   {
     id: "workshops",
     title: "Hands-on Guided Workshops",
     description:
-      "Interactive coding walkthroughs on quantum algorithms, VQE, QAOA, quantum machine learning, and error mitigation.",
+      "Build circuits in Qiskit from scratch, then the algorithm families the hackathon problems reach for: VQE, QAOA, quantum machine learning and error mitigation.",
     icon: "book-open",
   },
   {
     id: "food",
     title: "Food & Refreshments",
     description:
-      "Catered meals, midnight snacks, and coffee bar provided to keep your energy high throughout the 24-hour hackathon.",
+      "Meals and coffee through the full 24 hours of the hackathon, for anyone attending on campus.",
     icon: "coffee",
   },
 ];

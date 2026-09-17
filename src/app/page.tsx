@@ -12,7 +12,6 @@ import { FAQSection } from "@/components/sections/FAQSection";
 import { SocialsSection } from "@/components/sections/SocialsSection";
 import { VenueSection } from "@/components/sections/VenueSection";
 import { ScrollBirds } from "@/components/backgrounds/ScrollBirds";
-import { ScrollVideo } from "@/components/sections/ScrollVideo";
 
 export default function Home() {
   return (
@@ -20,7 +19,6 @@ export default function Home() {
       <Navbar />
       {/* relative so the bird layer can size itself to the whole page */}
       <main className="relative">
-        <ScrollVideo />
         <ScrollBirds />
         <Hero />
         <DetailsSection />

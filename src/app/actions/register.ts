@@ -18,7 +18,7 @@ function generateReferralCode(): string {
     chars.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
   }
 
-  return `QFF${chars.join("")}`;
+  return `QBITS${chars.join("")}`;
 }
 
 async function generateUniqueReferralCode(sql: ReturnType<typeof getDb>): Promise<string> {

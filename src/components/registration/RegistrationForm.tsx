@@ -42,6 +42,7 @@ const initialFormData: RegistrationFormData = {
   githubUrl: "",
   linkedinUrl: "",
   tshirtSize: "M (38\")",
+  referredByCode: "",
   agreedToTerms: false,
 };
 
@@ -54,6 +55,7 @@ export function RegistrationForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [ticketId, setTicketId] = useState("");
+  const [referralCode, setReferralCode] = useState("");
 
   const updateField = <K extends keyof RegistrationFormData>(
     field: K,
@@ -155,6 +157,7 @@ export function RegistrationForm() {
 
       if (result.ticketId) {
         setTicketId(result.ticketId);
+        setReferralCode(result.referralCode || "");
         setIsSubmitted(true);
         window.scrollTo({ top: 100, behavior: "smooth" });
       } else {
@@ -177,6 +180,7 @@ export function RegistrationForm() {
     setStep(1);
     setIsSubmitted(false);
     setTicketId("");
+    setReferralCode("");
     setSubmitError(null);
   };
 
@@ -203,6 +207,18 @@ export function RegistrationForm() {
               Your registration has been securely recorded. Confirmation details have been logged for{" "}
               <span className="font-mono font-medium text-pink-ink">{formData.email}</span>.
             </p>
+
+            {referralCode && (
+              <div className="mx-auto mt-5 max-w-md rounded-2xl border border-pink/40 bg-pink/10 p-4 text-left shadow-[0_0_22px_rgba(255,126,182,0.08)]">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-pink-ink">Your Referral Code</p>
+                <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface/80 px-3 py-2">
+                  <span className="font-mono text-lg font-bold text-ink">{referralCode}</span>
+                  <span className="rounded-full border border-pink/40 bg-pink/10 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-pink-ink">
+                    Shareable
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Digital Quantum Pass Card (Print Target) */}
@@ -271,6 +287,16 @@ export function RegistrationForm() {
                     {formData.institution}
                   </p>
                 </div>
+                {referralCode && (
+                  <div className="sm:col-span-2">
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-muted print:text-slate-600">
+                      Referral Code
+                    </p>
+                    <p className="mt-1 font-mono text-sm font-bold text-pink-ink print:text-sky-700">
+                      {referralCode}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Barcode Section */}
@@ -483,6 +509,23 @@ export function RegistrationForm() {
                     {errors.institution}
                   </p>
                 )}
+              </div>
+
+              <div className="sm:col-span-2">
+                <label htmlFor="reg-referral" className="block font-mono text-xs uppercase tracking-wider text-ink-dim">
+                  Referral Code <span className="text-muted font-normal">(optional)</span>
+                </label>
+                <input
+                  id="reg-referral"
+                  type="text"
+                  placeholder="Enter a code from a friend or campus ambassador"
+                  value={formData.referredByCode}
+                  onChange={(e) => updateField("referredByCode", e.target.value.toUpperCase())}
+                  className="mt-2 w-full rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50"
+                />
+                <p className="mt-1.5 text-[11px] text-muted">
+                  Optional — use your invited friend&apos;s code if they referred you.
+                </p>
               </div>
 
               {/* Study Level */}

@@ -89,12 +89,14 @@ export interface RegistrationFormData {
   githubUrl: string;
   linkedinUrl: string;
   tshirtSize: string;
+  referredByCode: string;
   agreedToTerms: boolean;
 }
 
 export interface RegistrationResponse {
   success?: boolean;
   ticketId?: string;
+  referralCode?: string;
   message?: string;
   error?: string;
 }
@@ -102,6 +104,7 @@ export interface RegistrationResponse {
 export interface RegistrationActionResult {
   success: boolean;
   ticketId?: string;
+  referralCode?: string;
   message?: string;
   error?: string;
   statusCode?: number;

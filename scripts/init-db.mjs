@@ -49,11 +49,32 @@ async function main() {
   try {
     console.log("📦 Applying schema migrations (registrations table & indexes)...");
     
-    // Split into individual SQL statements and execute via sql.query()
-    const statements = schemaSql
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+    // Split into individual SQL statements, respecting $$-quoted blocks
+    // (e.g. DO $$ ... $$ bodies) so semicolons inside them aren't treated
+    // as statement terminators.
+    const statements = [];
+    let current = "";
+    let inDollarQuote = false;
+
+    for (const line of schemaSql.split("\n")) {
+      current += line + "\n";
+
+      const dollarMatches = line.match(/\$\$/g);
+      if (dollarMatches) {
+        for (let i = 0; i < dollarMatches.length; i += 1) {
+          inDollarQuote = !inDollarQuote;
+        }
+      }
+
+      if (!inDollarQuote && line.trim().endsWith(";")) {
+        const trimmed = current.trim();
+        if (trimmed.length > 0) statements.push(trimmed);
+        current = "";
+      }
+    }
+
+    const trailing = current.trim();
+    if (trailing.length > 0) statements.push(trailing);
 
     for (const statement of statements) {
       await sql.query(statement);

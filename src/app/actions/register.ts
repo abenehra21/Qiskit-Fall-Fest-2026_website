@@ -107,6 +107,7 @@ export async function registerAttendee(
     const linkedinUrl = payload.linkedinUrl?.trim() || null;
     const tshirtSize = payload.tshirtSize?.trim() || "M (38\")";
     const referredByCode = payload.referredByCode?.trim().toUpperCase() || null;
+    const willingToBePOC = Boolean(payload.willingToBePOC);
 
     const sql = getDb();
 
@@ -161,7 +162,8 @@ export async function registerAttendee(
                 tshirt_size,
                 referral_code,
                 referred_by,
-                agreed_to_terms
+                agreed_to_terms,
+                willing_to_be_poc
               ) VALUES (
                 ${ticketId},
                 ${fullName},
@@ -178,7 +180,8 @@ export async function registerAttendee(
                 ${tshirtSize},
                 ${referralCode},
                 ${referredByCode},
-                ${Boolean(agreedToTerms)}
+                ${Boolean(agreedToTerms)},
+                ${willingToBePOC}
               )
               RETURNING id, ticket_id, email, created_at;
             `,

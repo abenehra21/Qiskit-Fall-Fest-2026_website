@@ -44,6 +44,7 @@ const initialFormData: RegistrationFormData = {
   tshirtSize: "M (38\")",
   referredByCode: "",
   agreedToTerms: false,
+  willingToBePOC: false,
 };
 
 export function RegistrationForm() {
@@ -759,6 +760,24 @@ export function RegistrationForm() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Point of Contact Opt-in */}
+            <div className="pt-4 border-t border-line">
+              <label className="flex items-start gap-3.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formData.willingToBePOC}
+                  onChange={(e) => updateField("willingToBePOC", e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-line text-pink-ink accent-pink-ink focus:ring-pink"
+                />
+                <span className="text-xs leading-relaxed text-ink-dim">
+                  I am willing to be the Point of Contact (POC) for my university/institution.
+                </span>
+              </label>
+              <p className="mt-1.5 pl-[calc(1rem+0.875rem)] text-[11px] text-muted">
+                Disclaimer: If you opt in, you will be added to a WhatsApp group for further POC communication.
+              </p>
             </div>
 
             {/* Code of Conduct Agreement */}

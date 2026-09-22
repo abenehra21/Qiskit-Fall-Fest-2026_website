@@ -24,6 +24,7 @@ BEGIN
       referred_by VARCHAR(20),
       referral_count INTEGER NOT NULL DEFAULT 0,
       agreed_to_terms BOOLEAN NOT NULL DEFAULT TRUE,
+      willing_to_be_poc BOOLEAN NOT NULL DEFAULT FALSE,
       status VARCHAR(50) NOT NULL DEFAULT 'confirmed',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -34,7 +35,8 @@ END $$;
 ALTER TABLE registrations
   ADD COLUMN IF NOT EXISTS referral_code VARCHAR(20),
   ADD COLUMN IF NOT EXISTS referred_by VARCHAR(20),
-  ADD COLUMN IF NOT EXISTS referral_count INTEGER NOT NULL DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS referral_count INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS willing_to_be_poc BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Index on lowercase email to enforce single registration per person
 CREATE UNIQUE INDEX IF NOT EXISTS idx_registrations_email_lower ON registrations (LOWER(email));

@@ -91,6 +91,7 @@ export interface RegistrationFormData {
   tshirtSize: string;
   referredByCode: string;
   agreedToTerms: boolean;
+  willingToBePOC: boolean;
 }
 
 export interface RegistrationResponse {

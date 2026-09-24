@@ -21,13 +21,21 @@ import type { NextConfig } from "next";
  * registration form could otherwise be framed for clickjacking), form-action,
  * base-uri and object-src.
  */
+/**
+ * React uses eval() in development for debugging features such as
+ * reconstructing a server callstack in the browser, and logs a hard error if
+ * the policy forbids it. It never uses eval in production, so the allowance is
+ * scoped to `next dev` and never reaches a deployed build.
+ */
+const isDev = process.env.NODE_ENV === "development";
+
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
   "form-action 'self'",
   "frame-ancestors 'none'",
   "frame-src 'none'",

@@ -49,3 +49,20 @@ CREATE INDEX IF NOT EXISTS idx_registrations_ticket_id ON registrations (ticket_
 
 -- Index on created_at for chronological ordering
 CREATE INDEX IF NOT EXISTS idx_registrations_created_at ON registrations (created_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Rate limiting counters.
+--
+-- One row per (bucket, window). Kept in Postgres rather than in process memory
+-- because serverless instances do not share memory, so an in-memory counter
+-- would reset on every cold start and never actually limit anything.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS rate_limit_hits (
+  bucket       TEXT NOT NULL,
+  window_start TIMESTAMPTZ NOT NULL,
+  hits         INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (bucket, window_start)
+);
+
+-- Supports the periodic sweep of expired windows.
+CREATE INDEX IF NOT EXISTS idx_rate_limit_window ON rate_limit_hits (window_start);

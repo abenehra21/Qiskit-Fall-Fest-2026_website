@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { LIMITS } from "@/lib/validation";
 import {
   Check,
   ArrowRight,
@@ -427,6 +428,7 @@ export function RegistrationForm() {
                   placeholder="e.g. Marie Curie"
                   value={formData.fullName}
                   onChange={(e) => updateField("fullName", e.target.value)}
+                  maxLength={LIMITS.fullName}
                   className={cn(
                     "mt-2 w-full rounded-xl border bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50",
                     errors.fullName ? "border-danger bg-danger/5" : "border-line"
@@ -451,6 +453,7 @@ export function RegistrationForm() {
                   placeholder="name@university.edu"
                   value={formData.email}
                   onChange={(e) => updateField("email", e.target.value)}
+                  maxLength={LIMITS.email}
                   className={cn(
                     "mt-2 w-full rounded-xl border bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50",
                     errors.email ? "border-danger bg-danger/5" : "border-line"
@@ -475,6 +478,7 @@ export function RegistrationForm() {
                   placeholder="+91 98765 43210"
                   value={formData.phone}
                   onChange={(e) => updateField("phone", e.target.value)}
+                  maxLength={LIMITS.phone}
                   className={cn(
                     "mt-2 w-full rounded-xl border bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50",
                     errors.phone ? "border-danger bg-danger/5" : "border-line"
@@ -499,6 +503,7 @@ export function RegistrationForm() {
                   placeholder="e.g. BITS Pilani"
                   value={formData.institution}
                   onChange={(e) => updateField("institution", e.target.value)}
+                  maxLength={LIMITS.institution}
                   className={cn(
                     "mt-2 w-full rounded-xl border bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50",
                     errors.institution ? "border-danger bg-danger/5" : "border-line"
@@ -522,6 +527,7 @@ export function RegistrationForm() {
                   placeholder="Enter a code from a friend or campus ambassador"
                   value={formData.referredByCode}
                   onChange={(e) => updateField("referredByCode", e.target.value.toUpperCase())}
+                  maxLength={LIMITS.referralCode}
                   className="mt-2 w-full rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50"
                 />
                 <p className="mt-1.5 text-[11px] text-muted">
@@ -560,6 +566,7 @@ export function RegistrationForm() {
                   placeholder="e.g. 2027"
                   value={formData.graduationYear}
                   onChange={(e) => updateField("graduationYear", e.target.value)}
+                  maxLength={LIMITS.graduationYear}
                   className="mt-2 w-full rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50"
                 />
               </div>
@@ -725,6 +732,7 @@ export function RegistrationForm() {
                   placeholder="https://github.com/..."
                   value={formData.githubUrl}
                   onChange={(e) => updateField("githubUrl", e.target.value)}
+                  maxLength={LIMITS.url}
                   className="mt-2 w-full rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50"
                 />
               </div>
@@ -739,6 +747,7 @@ export function RegistrationForm() {
                   placeholder="https://linkedin.com/in/..."
                   value={formData.linkedinUrl}
                   onChange={(e) => updateField("linkedinUrl", e.target.value)}
+                  maxLength={LIMITS.url}
                   className="mt-2 w-full rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm text-ink placeholder:text-muted transition-all focus:border-pink focus:outline-none focus:ring-1 focus:ring-pink/50"
                 />
               </div>

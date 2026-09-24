@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:validation": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types src/lib/validation.check.ts"
   },
   "dependencies": {
     "@fontsource/bricolage-grotesque": "^5.3.0",

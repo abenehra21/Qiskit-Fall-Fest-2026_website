@@ -1,12 +1,17 @@
 import { neon } from "@neondatabase/serverless";
 
 /**
- * Normalizes the database URL by removing trailing inline comments and whitespace
+ * Normalizes the database URL by removing a trailing inline comment.
+ *
+ * Splitting on the first "#" silently truncated any connection string whose
+ * password contained one — a legal character that Neon does hand out — and the
+ * resulting failure looks like bad credentials rather than a mangled URL. An
+ * inline comment in a .env file is only a comment when the "#" follows
+ * whitespace, so that is what is matched.
  */
 function getDatabaseUrl(): string {
   const raw = process.env.DATABASE_URL || "";
-  const cleaned = raw.split("#")[0].trim();
-  return cleaned;
+  return raw.replace(/\s+#.*$/, "").trim();
 }
 
 /** Whether a database is configured at all. */

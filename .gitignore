@@ -1,6 +1,5 @@
 node_modules
 .next
-.env.local
 .DS_Store
 *.log
 docs
@@ -8,3 +7,16 @@ docs
 
 # editor/agent launch config
 .claude/
+
+# Secrets. Only .env.example belongs in git — it holds placeholders, never
+# real values. .env.local was the only pattern covered before, so a developer
+# who created a plain .env would have committed live credentials.
+.env
+.env.*
+!.env.example
+
+# Keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx

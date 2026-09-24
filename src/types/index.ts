@@ -108,5 +108,7 @@ export interface RegistrationActionResult {
   referralCode?: string;
   message?: string;
   error?: string;
+  /** Set alongside a 429 so the caller can surface a Retry-After. */
+  retryAfterSeconds?: number;
   statusCode?: number;
 }

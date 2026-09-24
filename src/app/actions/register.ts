@@ -3,6 +3,25 @@
 import crypto from "node:crypto";
 import { getDb, hasDatabase } from "@/lib/db";
 import { RegistrationFormData, RegistrationActionResult } from "@/types";
+import { clientIp, rateLimit, sweepRateLimits } from "@/lib/rate-limit";
+import { experienceLevels, studyLevels, tshirtSizes } from "@/data/registration";
+import {
+  LIMITS,
+  takeInterests,
+  takeOption,
+  takeText,
+  takeUrl,
+  type FieldError,
+} from "@/lib/validation";
+
+/** The choices the form actually offers; anything else is rejected. */
+const ALLOWED_STUDY_LEVELS = studyLevels;
+const ALLOWED_TSHIRT_SIZES = tshirtSizes;
+const ALLOWED_EXPERIENCE = experienceLevels.map((level) => level.id);
+
+/** Ten attempts per IP per hour: generous for a person, useless for a script. */
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 function generateTicketId(): string {
   // Generates a readable 6-character hex code, e.g. "QFF-9A4F2C"
@@ -14,8 +33,11 @@ function generateReferralCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const chars: string[] = [];
 
+  // crypto.randomInt, not Math.random: a referral code is looked up, counted
+  // against, and shared as an identifier, so it should not be predictable from
+  // other codes issued nearby. The ticket ID above already uses the CSPRNG.
   for (let i = 0; i < 8; i += 1) {
-    chars.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+    chars.push(alphabet[crypto.randomInt(alphabet.length)]);
   }
 
   return `QBITS${chars.join("")}`;
@@ -58,13 +80,37 @@ export async function registerAttendee(
       };
     }
 
-    // 1. Validate required fields
-    const fullName = payload.fullName?.trim();
-    const email = payload.email?.trim().toLowerCase();
-    const phone = payload.phone?.trim();
-    const institution = payload.institution?.trim();
+    // 1. Rate limit before anything else touches the database. Both the form
+    //    (which calls this action directly) and POST /api/register arrive
+    //    here, so this is the single place that covers both.
+    const ip = await clientIp();
+    const limit = await rateLimit(`register:${ip}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
+    if (!limit.ok) {
+      return {
+        success: false,
+        error: "Too many registration attempts from this network. Please try again later.",
+        statusCode: 429,
+        retryAfterSeconds: limit.retryAfterSeconds,
+      };
+    }
+    void sweepRateLimits();
+
+    // 2. Validate required fields. Every string is length-capped: the schema
+    //    bounds most columns, but github_url, linkedin_url and interests are
+    //    unbounded TEXT, so without a cap here one request can store an
+    //    arbitrarily large row.
+    const errors: FieldError[] = [];
+    const fullName = takeText(payload.fullName, "Full name", LIMITS.fullName, errors);
+    const rawEmail = takeText(payload.email, "Email", LIMITS.email, errors);
+    const email = rawEmail?.toLowerCase();
+    const phone = takeText(payload.phone, "Phone", LIMITS.phone, errors);
+    const institution = takeText(payload.institution, "Institution", LIMITS.institution, errors);
     const attendanceMode = payload.attendanceMode;
     const agreedToTerms = payload.agreedToTerms;
+
+    if (errors.length > 0) {
+      return { success: false, error: errors[0].message, statusCode: 400 };
+    }
 
     if (!fullName) {
       return { success: false, error: "Full name is required.", statusCode: 400 };
@@ -98,16 +144,34 @@ export async function registerAttendee(
       };
     }
 
-    // 2. Normalize optional fields (empty strings to SQL nulls)
-    const studyLevel = payload.studyLevel?.trim() || null;
-    const graduationYear = payload.graduationYear?.trim() || null;
-    const quantumExperience = payload.quantumExperience?.trim() || "beginner";
-    const interests = Array.isArray(payload.interests) ? payload.interests : [];
-    const githubUrl = payload.githubUrl?.trim() || null;
-    const linkedinUrl = payload.linkedinUrl?.trim() || null;
-    const tshirtSize = payload.tshirtSize?.trim() || "M (38\")";
-    const referredByCode = payload.referredByCode?.trim().toUpperCase() || null;
+    // 3. Normalize optional fields. Anything the form offers as a fixed choice
+    //    is checked against that list, so a hand-rolled POST cannot write a
+    //    value the organisers will later have to clean out of a CSV.
+    const studyLevel = takeOption(payload.studyLevel, "Study level", ALLOWED_STUDY_LEVELS, errors);
+    const graduationYear = takeText(
+      payload.graduationYear,
+      "Graduation year",
+      LIMITS.graduationYear,
+      errors,
+    );
+    const quantumExperience =
+      takeOption(payload.quantumExperience, "Experience", ALLOWED_EXPERIENCE, errors) ?? "beginner";
+    const interests = takeInterests(payload.interests, errors);
+    const githubUrl = takeUrl(payload.githubUrl, "GitHub URL", errors);
+    const linkedinUrl = takeUrl(payload.linkedinUrl, "LinkedIn URL", errors);
+    const tshirtSize =
+      takeOption(payload.tshirtSize, "T-shirt size", ALLOWED_TSHIRT_SIZES, errors) ?? "M (38\")";
+    const referredByCode = takeText(
+      payload.referredByCode,
+      "Referral code",
+      LIMITS.referralCode,
+      errors,
+    )?.toUpperCase() ?? null;
     const willingToBePOC = Boolean(payload.willingToBePOC);
+
+    if (errors.length > 0) {
+      return { success: false, error: errors[0].message, statusCode: 400 };
+    }
 
     const sql = getDb();
 
@@ -239,7 +303,13 @@ export async function registerAttendee(
       };
     }
 
-    console.error("Neon database registration error:", err);
+    // Log the shape of the failure, never the payload. Driver errors can echo
+    // the failing statement back with its parameter values, which for this
+    // table means a registrant's name, email and phone in the log stream.
+    console.error("Neon database registration error:", {
+      code: pgError?.code,
+      constraint: pgError?.constraint,
+    });
     return {
       success: false,
       error: "Unable to store registration in database. Please check connection and try again.",

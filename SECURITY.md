@@ -17,7 +17,7 @@ the form's path open.
 | SQL injection | Every query uses Neon's tagged templates, including inside `sql.transaction()`. No string concatenation anywhere. |
 | Input size | Every field is length-capped in `src/lib/validation.ts`, and the route rejects bodies over 16 KB before parsing. `github_url`, `linkedin_url` and `interests` are unbounded `TEXT` in the schema, so the cap has to be enforced in code. |
 | Input shape | Study level, t-shirt size and experience are checked against the lists the form offers. URLs must parse and must be `http`/`https`. |
-| Rate limiting | 10 attempts per IP per hour, counted in Postgres (`rate_limit_hits`). |
+| Rate limiting | 10 attempts per IP per hour, counted in Postgres (`rate_limit_hits`), which is created on first use if missing. |
 | Clickjacking | `frame-ancestors 'none'` plus `X-Frame-Options: DENY`. |
 | Transport | HSTS, one year, `includeSubDomains`. Not preload-eligible by choice — see below. |
 | Sniffing | `X-Content-Type-Options: nosniff`. |

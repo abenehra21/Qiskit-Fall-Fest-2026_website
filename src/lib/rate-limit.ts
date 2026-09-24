@@ -16,19 +16,61 @@ import { getDb } from "@/lib/db";
  * per request instead of a row per window; revisit if that burst matters.
  */
 
+/**
+ * Whether this instance has already satisfied itself the counter table exists.
+ * Only an optimisation — it saves re-running the CREATE on the happy path.
+ */
+let tableEnsured = false;
+
+/** Create the counter table. Idempotent, so concurrent callers cannot collide. */
+async function ensureTable(sql: ReturnType<typeof getDb>): Promise<void> {
+  await sql`
+    CREATE TABLE IF NOT EXISTS rate_limit_hits (
+      bucket       TEXT NOT NULL,
+      window_start TIMESTAMPTZ NOT NULL,
+      hits         INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (bucket, window_start)
+    );
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_rate_limit_window ON rate_limit_hits (window_start);
+  `;
+  tableEnsured = true;
+}
+
 /** One UPSERT per attempt, returning the new count. Atomic under concurrency. */
 async function bump(bucket: string, windowMs: number): Promise<number> {
   const sql = getDb();
   const windowStart = new Date(Math.floor(Date.now() / windowMs) * windowMs);
 
-  const rows = (await sql`
-    INSERT INTO rate_limit_hits (bucket, window_start, hits)
-    VALUES (${bucket}, ${windowStart.toISOString()}, 1)
-    ON CONFLICT (bucket, window_start)
-    DO UPDATE SET hits = rate_limit_hits.hits + 1
-    RETURNING hits;
-  `) as { hits: number }[];
+  const upsert = async () =>
+    (await sql`
+      INSERT INTO rate_limit_hits (bucket, window_start, hits)
+      VALUES (${bucket}, ${windowStart.toISOString()}, 1)
+      ON CONFLICT (bucket, window_start)
+      DO UPDATE SET hits = rate_limit_hits.hits + 1
+      RETURNING hits;
+    `) as { hits: number }[];
 
+  let rows: { hits: number }[];
+  try {
+    rows = await upsert();
+  } catch (err) {
+    // 42P01 = undefined_table. The table ships in schema.sql, but that
+    // migration is applied by hand and a deploy can easily land before anyone
+    // runs it — which would leave the endpoint silently unlimited. Rather than
+    // depend on someone remembering, create it on first use and retry once.
+    //
+    // This is the only DDL the app issues. It is idempotent, it runs at most
+    // once per instance on the happy path, and if the database role cannot
+    // create tables the error propagates to the caller, which fails open.
+    if ((err as { code?: string })?.code !== "42P01" || tableEnsured) throw err;
+    console.warn("rate_limit_hits was missing; creating it now.");
+    await ensureTable(sql);
+    rows = await upsert();
+  }
+
+  tableEnsured = true;
   return rows[0]?.hits ?? 1;
 }
 
@@ -79,11 +121,14 @@ export async function rateLimit(
     // migration is applied by hand, so this is the expected failure the first
     // time this code meets a database that has not had it run. Registration
     // still proceeds — it is just unlimited until the table exists.
+    // Reaching here means even the self-heal above did not work — most likely
+    // the database role is not allowed to create tables. Say so plainly,
+    // because the endpoint is unlimited until someone acts on it.
     const code = (err as { code?: string })?.code;
-    if (code === "42P01") {
+    if (code === "42P01" || code === "42501") {
       console.error(
-        "Rate limiting is INACTIVE: the rate_limit_hits table is missing. " +
-          "Run `npm run db:init` against this database to create it.",
+        "Rate limiting is INACTIVE: rate_limit_hits is missing and could not be " +
+          "created automatically. Run `npm run db:init` against this database.",
       );
     } else {
       console.error("Rate limit check failed, allowing the request:", code ?? err);

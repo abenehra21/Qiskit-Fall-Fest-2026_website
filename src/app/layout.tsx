@@ -1,8 +1,23 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+/**
+ * The absolute base every Open Graph, Twitter and canonical URL is resolved
+ * against.
+ *
+ * The fallback used to be a placeholder domain, so unless NEXT_PUBLIC_APP_URL
+ * was set in the deployment the share cards on WhatsApp, Discord and Twitter
+ * pointed at qff2026.example.com — the registration link previewed as a site
+ * nobody owns. Vercel injects the real hostname at build time, so the deploy
+ * now describes itself correctly with nothing configured; setting
+ * NEXT_PUBLIC_APP_URL still wins, and is what a custom domain needs.
+ */
+const vercelHost =
+  process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+
 const siteUrl =
-  process.env.NEXT_PUBLIC_APP_URL || "https://qff2026.example.com";
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (vercelHost ? `https://${vercelHost}` : "http://localhost:3000");
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

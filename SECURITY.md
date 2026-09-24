@@ -19,7 +19,7 @@ the form's path open.
 | Input shape | Study level, t-shirt size and experience are checked against the lists the form offers. URLs must parse and must be `http`/`https`. |
 | Rate limiting | 10 attempts per IP per hour, counted in Postgres (`rate_limit_hits`). |
 | Clickjacking | `frame-ancestors 'none'` plus `X-Frame-Options: DENY`. |
-| Transport | HSTS, two years, `includeSubDomains`, preload-eligible. |
+| Transport | HSTS, one year, `includeSubDomains`. Not preload-eligible by choice — see below. |
 | Sniffing | `X-Content-Type-Options: nosniff`. |
 | Referrer leakage | `strict-origin-when-cross-origin`. |
 | Framework disclosure | `poweredByHeader: false`. |
@@ -30,6 +30,20 @@ the form's path open.
 
 No new environment variables or third-party services are required — the rate
 limiter reuses the database that is already configured.
+
+## Before this ships
+
+`schema.sql` adds a `rate_limit_hits` table, and the migration is applied by
+hand — it is not part of `next build`. **Run it against the production database
+when this deploys:**
+
+```
+npm run db:init
+```
+
+Until that runs, registration still works: the counter query fails, the limiter
+fails open, and the server logs `Rate limiting is INACTIVE`. Nothing breaks, but
+nothing is limited either.
 
 ## Known limits
 
@@ -50,6 +64,12 @@ per request instead of a row per window.
 **The limiter fails open.** If the counter query errors, the registration is
 allowed through. A limiter that takes the form down when the database hiccups
 would cause more harm than the abuse it prevents.
+
+**HSTS does not declare `preload`.** The preload list is effectively permanent
+and applies to the entire domain, which is not this project's decision to make
+for whatever else lives under it. Add `preload` and raise `max-age` once every
+host under the domain is confirmed HTTPS-only and someone has chosen to submit
+it at hstspreload.org.
 
 **`x-forwarded-for` is trusted.** That is correct behind Vercel, which
 overwrites the header. It would not be correct on a bare origin, where a client

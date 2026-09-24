@@ -75,7 +75,19 @@ export async function rateLimit(
     }
     return { ok: true, retryAfterSeconds: 0 };
   } catch (err) {
-    console.error("Rate limit check failed, allowing the request:", err);
+    // 42P01 = undefined_table. The counter table ships in schema.sql but the
+    // migration is applied by hand, so this is the expected failure the first
+    // time this code meets a database that has not had it run. Registration
+    // still proceeds — it is just unlimited until the table exists.
+    const code = (err as { code?: string })?.code;
+    if (code === "42P01") {
+      console.error(
+        "Rate limiting is INACTIVE: the rate_limit_hits table is missing. " +
+          "Run `npm run db:init` against this database to create it.",
+      );
+    } else {
+      console.error("Rate limit check failed, allowing the request:", code ?? err);
+    }
     return { ok: true, retryAfterSeconds: 0 };
   }
 }

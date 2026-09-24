@@ -47,10 +47,13 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
   },
   {
-    // Two years, subdomains included, preload-eligible. Vercel serves HTTPS
-    // only, so there is no plaintext origin for this to lock users out of.
+    // One year, subdomains included. Deliberately NOT preload-eligible: the
+    // preload list is effectively permanent and applies to the whole domain,
+    // which is not this project's to commit on behalf of. Add `preload` and
+    // raise max-age once every host under this domain is confirmed HTTPS-only
+    // and someone has decided to submit it.
     key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
+    value: "max-age=31536000; includeSubDomains",
   },
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];
